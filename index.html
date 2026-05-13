@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Dashboard Switcher</title>
+    <meta name="description" content="Auto-switching master dashboard combining Delivery and TV dashboards">
+    <style>
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: #0a0a0a;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        .iframe-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .iframe-container iframe {
+            width: 100vw;
+            height: 100vh;
+            border: none;
+            overflow: hidden;
+            display: block;
+        }
+
+        .iframe-container.hidden {
+            visibility: hidden;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .iframe-container.visible {
+            visibility: visible;
+            pointer-events: auto;
+            z-index: 1;
+        }
+
+        /* Countdown Timer */
+        #countdown-timer {
+            position: fixed;
+            bottom: 12px;
+            right: 16px;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            cursor: pointer;
+            transition: opacity 0.4s ease, transform 0.3s ease;
+            opacity: 0.5;
+            user-select: none;
+        }
+
+        #countdown-timer:hover {
+            opacity: 1;
+            transform: scale(1.05);
+            background: rgba(0, 0, 0, 0.75);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        #countdown-timer .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #4ade80;
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; box-shadow: 0 0 4px #4ade80; }
+            50% { opacity: 0.4; box-shadow: none; }
+        }
+
+        #countdown-timer .label {
+            color: rgba(255, 255, 255, 0.45);
+            font-size: 11px;
+        }
+
+        #countdown-timer .time {
+            font-variant-numeric: tabular-nums;
+            color: rgba(255, 255, 255, 0.85);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="frame-delivery" class="iframe-container visible">
+        <iframe src="https://nametempal.github.io/delivery-dashboard/" 
+                scrolling="no" 
+                allowfullscreen
+                title="Delivery Dashboard"></iframe>
+    </div>
+
+    <div id="frame-tv" class="iframe-container hidden">
+        <iframe src="https://nametempal.github.io/tv-dashboard/" 
+                scrolling="no" 
+                allowfullscreen
+                title="TV Dashboard"></iframe>
+    </div>
+
+    <div id="countdown-timer" title="Click to switch now">
+        <span class="dot"></span>
+        <span class="label">Next</span>
+        <span class="time" id="timer-display">05:00</span>
+    </div>
+
+    <script>
+        const SWITCH_INTERVAL = 300; // seconds
+        const frameDelivery = document.getElementById('frame-delivery');
+        const frameTv = document.getElementById('frame-tv');
+        const timerDisplay = document.getElementById('timer-display');
+        const timerEl = document.getElementById('countdown-timer');
+
+        let remaining = SWITCH_INTERVAL;
+        let currentFrame = 'delivery'; // starts with delivery
+
+        function formatTime(sec) {
+            const m = String(Math.floor(sec / 60)).padStart(2, '0');
+            const s = String(sec % 60).padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        function switchDashboard() {
+            if (currentFrame === 'delivery') {
+                frameDelivery.classList.replace('visible', 'hidden');
+                frameTv.classList.replace('hidden', 'visible');
+                currentFrame = 'tv';
+            } else {
+                frameTv.classList.replace('visible', 'hidden');
+                frameDelivery.classList.replace('hidden', 'visible');
+                currentFrame = 'delivery';
+            }
+            remaining = SWITCH_INTERVAL;
+        }
+
+        // Click timer to switch immediately
+        timerEl.addEventListener('click', () => {
+            switchDashboard();
+        });
+
+        // Countdown tick
+        setInterval(() => {
+            remaining--;
+            if (remaining <= 0) {
+                switchDashboard();
+            }
+            timerDisplay.textContent = formatTime(remaining);
+        }, 1000);
+
+        // Initial display
+        timerDisplay.textContent = formatTime(remaining);
+    </script>
+
+</body>
+</html>
