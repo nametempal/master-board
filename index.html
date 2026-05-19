@@ -161,6 +161,13 @@
             switchDashboard();
         });
 
+        // Arrow key navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                switchDashboard();
+            }
+        });
+
         // Countdown tick
         setInterval(() => {
             remaining--;
