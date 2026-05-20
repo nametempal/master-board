@@ -37,14 +37,11 @@
         }
 
         .iframe-container.hidden {
-            visibility: hidden;
-            pointer-events: none;
-            z-index: 0;
+            display: none;
         }
 
         .iframe-container.visible {
-            visibility: visible;
-            pointer-events: auto;
+            display: block;
             z-index: 1;
         }
 
@@ -58,9 +55,7 @@
             align-items: center;
             gap: 8px;
             padding: 6px 14px;
-            background: rgba(0, 0, 0, 0.55);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            background: rgba(0, 0, 0, 0.8);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 20px;
             color: rgba(255, 255, 255, 0.7);
@@ -110,7 +105,7 @@
     </div>
 
     <div id="frame-tv" class="iframe-container hidden">
-        <iframe src="https://nametempal.github.io/tv-dashboard/" 
+        <iframe src="about:blank" 
                 scrolling="no" 
                 allowfullscreen
                 title="TV Dashboard"></iframe>
@@ -138,9 +133,6 @@
 
         let remaining = SWITCH_INTERVAL;
         let currentFrame = 'delivery'; // starts with delivery
-
-        // INITIAL OPTIMIZATION: Unload the hidden TV dashboard to save CPU/Memory
-        iframeTv.src = 'about:blank';
 
         function formatTime(sec) {
             const m = String(Math.floor(sec / 60)).padStart(2, '0');
@@ -207,16 +199,8 @@
             }
         });
 
-        // Use requestAnimationFrame for CPU-efficient timer instead of setInterval
-        let lastTime = performance.now();
-        function timerLoop(time) {
-            if (time - lastTime >= 1000) {
-                handleTick();
-                lastTime = time;
-            }
-            requestAnimationFrame(timerLoop);
-        }
-        requestAnimationFrame(timerLoop); // Start the loop
+        // setInterval at 1s is more CPU-efficient than rAF (1 wake/sec vs 60 wakes/sec)
+        setInterval(handleTick, 1000);
 
         // Initial display
         timerDisplay.textContent = formatTime(remaining);
