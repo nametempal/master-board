@@ -85,12 +85,7 @@
             height: 6px;
             border-radius: 50%;
             background: #4ade80;
-            animation: pulse-dot 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse-dot {
-            0%, 100% { opacity: 1; box-shadow: 0 0 4px #4ade80; }
-            50% { opacity: 0.4; box-shadow: none; }
+            /* Removed animation to reduce GPU/CPU load on low-end Linux devices */
         }
 
         #countdown-timer .label {
@@ -129,13 +124,23 @@
 
     <script>
         const SWITCH_INTERVAL = 300; // seconds
+        const PRELOAD_TIME = 10; // seconds before switch to preload iframe
+
+        const URL_DELIVERY = 'https://nametempal.github.io/delivery-dashboard/';
+        const URL_TV = 'https://nametempal.github.io/tv-dashboard/';
+
         const frameDelivery = document.getElementById('frame-delivery');
         const frameTv = document.getElementById('frame-tv');
+        const iframeDelivery = frameDelivery.querySelector('iframe');
+        const iframeTv = frameTv.querySelector('iframe');
         const timerDisplay = document.getElementById('timer-display');
         const timerEl = document.getElementById('countdown-timer');
 
         let remaining = SWITCH_INTERVAL;
         let currentFrame = 'delivery'; // starts with delivery
+
+        // INITIAL OPTIMIZATION: Unload the hidden TV dashboard to save CPU/Memory
+        iframeTv.src = 'about:blank';
 
         function formatTime(sec) {
             const m = String(Math.floor(sec / 60)).padStart(2, '0');
@@ -145,37 +150,73 @@
 
         function switchDashboard() {
             if (currentFrame === 'delivery') {
+                // Failsafe: if not preloaded, load it now
+                if (!iframeTv.src.includes('tv-dashboard')) iframeTv.src = URL_TV;
                 frameDelivery.classList.replace('visible', 'hidden');
                 frameTv.classList.replace('hidden', 'visible');
+                // Unload Delivery dashboard 1s after hiding to kill its JS processes and API calls
+                setTimeout(() => iframeDelivery.src = 'about:blank', 1000);
                 currentFrame = 'tv';
             } else {
+                // Failsafe
+                if (!iframeDelivery.src.includes('delivery-dashboard')) iframeDelivery.src = URL_DELIVERY;
                 frameTv.classList.replace('visible', 'hidden');
                 frameDelivery.classList.replace('hidden', 'visible');
+                // Unload TV dashboard
+                setTimeout(() => iframeTv.src = 'about:blank', 1000);
                 currentFrame = 'delivery';
             }
             remaining = SWITCH_INTERVAL;
+            timerDisplay.textContent = formatTime(remaining);
+        }
+
+        function handleTick() {
+            remaining--;
+
+            // OPTIMIZATION: Preload the next dashboard 10 seconds before switching
+            if (remaining === PRELOAD_TIME) {
+                if (currentFrame === 'delivery') {
+                    iframeTv.src = URL_TV;
+                } else {
+                    iframeDelivery.src = URL_DELIVERY;
+                }
+            }
+
+            if (remaining <= 0) {
+                switchDashboard();
+            } else {
+                timerDisplay.textContent = formatTime(remaining);
+            }
+        }
+
+        // Force load next iframe before switching if user manually triggers it
+        function manualSwitch() {
+            if (currentFrame === 'delivery' && !iframeTv.src.includes('tv-dashboard')) iframeTv.src = URL_TV;
+            if (currentFrame === 'tv' && !iframeDelivery.src.includes('delivery-dashboard')) iframeDelivery.src = URL_DELIVERY;
+            // Tiny delay to ensure src is set before visibility toggle
+            setTimeout(switchDashboard, 50);
         }
 
         // Click timer to switch immediately
-        timerEl.addEventListener('click', () => {
-            switchDashboard();
-        });
+        timerEl.addEventListener('click', manualSwitch);
 
         // Arrow key navigation
         document.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-                switchDashboard();
+                manualSwitch();
             }
         });
 
-        // Countdown tick
-        setInterval(() => {
-            remaining--;
-            if (remaining <= 0) {
-                switchDashboard();
+        // Use requestAnimationFrame for CPU-efficient timer instead of setInterval
+        let lastTime = performance.now();
+        function timerLoop(time) {
+            if (time - lastTime >= 1000) {
+                handleTick();
+                lastTime = time;
             }
-            timerDisplay.textContent = formatTime(remaining);
-        }, 1000);
+            requestAnimationFrame(timerLoop);
+        }
+        requestAnimationFrame(timerLoop); // Start the loop
 
         // Initial display
         timerDisplay.textContent = formatTime(remaining);
